@@ -30,8 +30,11 @@ def differential(omega, v_bb_gen, delta):
     E_gen_cmplx = mag_and_angle_to_cmplx(E_fd_gen, delta)
     P_e_gen = (v_bb_gen * np.conj((E_gen_cmplx - v_bb_gen) / (1j * X_gen))).real
 
+    # transform the constant mechanical energy into torque
+    T_m_gen = P_m_gen / (1 + omega)
+
     # Differential equations of a generator according to Machowski
-    domega_dt = 1 / (2 * H_gen) * (P_m_gen - P_e_gen)
+    domega_dt = 1 / (2 * H_gen) * (T_m_gen - P_e_gen)
     ddelta_dt = omega * 2 * np.pi * fn
 
     return domega_dt, ddelta_dt
@@ -75,7 +78,7 @@ def do_sim():
     for timestep in t:
 
         # Those lines cause a short circuit at t = 1 s until t = 1.05 s
-        if 1 <= timestep <= 1.05:
+        if 1 <= timestep < 1.05:
             sc_on = True
         else:
             sc_on = False
@@ -101,10 +104,16 @@ if __name__ == '__main__':
     # In this example, the results are omega, delta, e_q_t, e_d_t, e_q_st, e_d_st of the generator and the IBB
     t_sim, res = do_sim()
 
+    # load the results from powerfactory for comparison
+    delta_omega_pf = np.loadtxt('pictures/powerfactory_data.csv', skiprows=1, delimiter=',')
+
     # Plot the results
-    plt.plot(t_sim, res[:, 0].real, label='delta_omega_gen')
+    plt.plot(t_sim, res[:, 0].real, label='delta_omega_gen_python')
+    plt.plot(delta_omega_pf[:, 0], delta_omega_pf[:, 1] - 1, label='delta_omega_gen_powerfactory')
     plt.legend()
     plt.title('Reaction of a generator to a short circuit')
+
+    plt.savefig('pictures/short_circuit.png')
 
     plt.show()
 
